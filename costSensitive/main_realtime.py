@@ -53,6 +53,30 @@ def parse_args():
         default=None,
         help="异常分数阈值tau2，anomaly_score > tau2 判定为未知",
     )
+    parser.add_argument(
+        "--risk-alpha",
+        type=float,
+        default=None,
+        help="风险融合系数，risk=alpha*(1-confidence)+(1-alpha)*anomaly_risk",
+    )
+    parser.add_argument(
+        "--alert-threshold",
+        type=float,
+        default=None,
+        help="告警阈值，risk_score >= alert_threshold 时触发告警",
+    )
+    parser.add_argument(
+        "--medium-threshold",
+        type=float,
+        default=None,
+        help="中危阈值，risk_score >= medium_threshold 判定中危",
+    )
+    parser.add_argument(
+        "--high-threshold",
+        type=float,
+        default=None,
+        help="高危阈值，risk_score >= high_threshold 判定高危",
+    )
     parser.add_argument("--batch-size", type=int, default=64)
     parser.add_argument("--batch-wait-ms", type=int, default=50)
     parser.add_argument("--flow-timeout-s", type=float, default=10.0)
@@ -100,6 +124,10 @@ def main():
         unknown_detector_path=args.unknown_detector_path,
         unknown_threshold_conf=args.unknown_threshold_conf,
         unknown_threshold_anom=args.unknown_threshold_anom,
+        risk_alpha=args.risk_alpha,
+        alert_threshold=args.alert_threshold,
+        medium_threshold=args.medium_threshold,
+        high_threshold=args.high_threshold,
     )
 
 

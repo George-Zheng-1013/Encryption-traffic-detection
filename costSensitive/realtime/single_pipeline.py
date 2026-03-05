@@ -1,5 +1,6 @@
 import csv
 import json
+import math
 import os
 import sys
 import time
@@ -87,6 +88,10 @@ class SinglePipelineRunner:
         unknown_detector_path: Optional[str] = None,
         unknown_threshold_conf: Optional[float] = None,
         unknown_threshold_anom: Optional[float] = None,
+        risk_alpha: Optional[float] = None,
+        alert_threshold: Optional[float] = None,
+        medium_threshold: Optional[float] = None,
+        high_threshold: Optional[float] = None,
     ):
         import torch
         import torch.nn.functional as F
@@ -110,8 +115,29 @@ class SinglePipelineRunner:
 
         self.unknown_enable = bool(unknown_enable)
         self.unknown_detector_path = unknown_detector_path
-        self.unknown_tau1 = unknown_threshold_conf
-        self.unknown_tau2 = unknown_threshold_anom
+        self._risk_alpha_overridden = risk_alpha is not None
+        self.unknown_tau1 = (
+            float(unknown_threshold_conf)
+            if unknown_threshold_conf is not None
+            else float("nan")
+        )
+        self.unknown_tau2 = (
+            float(unknown_threshold_anom)
+            if unknown_threshold_anom is not None
+            else float("nan")
+        )
+        self.risk_alpha = float(risk_alpha) if risk_alpha is not None else 0.5
+        self.alert_threshold = (
+            float(alert_threshold) if alert_threshold is not None else float("nan")
+        )
+        self.medium_threshold = (
+            float(medium_threshold) if medium_threshold is not None else float("nan")
+        )
+        self.high_threshold = (
+            float(high_threshold) if high_threshold is not None else float("nan")
+        )
+        self.anom_q05: Optional[float] = None
+        self.anom_q95: Optional[float] = None
         self.unknown_detector_name = None
         self.unknown_per_class_detectors = None
         self.unknown_global_detector = None
@@ -132,6 +158,7 @@ class SinglePipelineRunner:
         self.total_dropped_packets = 0
         self.total_samples = 0
         self.total_results = 0
+        self.alert_level_counter: Dict[str, int] = {"low": 0, "medium": 0, "high": 0}
         self.samples_by_trigger: Dict[str, int] = {
             "length": 0,
             "timeout": 0,
@@ -154,25 +181,87 @@ class SinglePipelineRunner:
                 self.unknown_global_detector = payload.get("global_detector")
 
                 thresholds = payload.get("thresholds", {})
-                if self.unknown_tau1 is None:
+                if not math.isfinite(self.unknown_tau1):
                     self.unknown_tau1 = thresholds.get("tau1")
-                if self.unknown_tau2 is None:
+                if not math.isfinite(self.unknown_tau2):
                     self.unknown_tau2 = thresholds.get("tau2")
+
+                risk_payload = payload.get("risk", {})
+                if not self._risk_alpha_overridden:
+                    self.risk_alpha = risk_payload.get("alpha")
+                if not math.isfinite(self.alert_threshold):
+                    self.alert_threshold = thresholds.get("alert_threshold")
+                if not math.isfinite(self.medium_threshold):
+                    self.medium_threshold = thresholds.get("medium_threshold")
+                if not math.isfinite(self.high_threshold):
+                    self.high_threshold = thresholds.get("high_threshold")
+
+                normalization = risk_payload.get("normalization", {})
+                self.anom_q05 = normalization.get("anomaly_q05")
+                self.anom_q95 = normalization.get("anomaly_q95")
             except Exception as exc:
                 print(f"[WARN] unknown检测器加载失败: {exc}")
 
-        if self.unknown_tau1 is None:
+        if not math.isfinite(self.unknown_tau1):
             print("[WARN] unknown_enable已开启，但tau1缺失，降级为仅分类输出")
             self.unknown_enable = False
             return
 
+        if not math.isfinite(self.risk_alpha):
+            self.risk_alpha = 0.5
+        self.risk_alpha = float(np.clip(self.risk_alpha, 0.0, 1.0))
+
+        if not math.isfinite(self.alert_threshold):
+            self.alert_threshold = 0.5
+        if not math.isfinite(self.medium_threshold):
+            self.medium_threshold = float(self.alert_threshold)
+        if not math.isfinite(self.high_threshold):
+            self.high_threshold = max(0.9, float(self.medium_threshold))
+
+        self.alert_threshold = float(self.alert_threshold)
+        self.medium_threshold = max(float(self.medium_threshold), self.alert_threshold)
+        self.high_threshold = max(float(self.high_threshold), self.medium_threshold)
+
         print(
-            "[UNKNOWN] enabled=1 detector={} tau1={} tau2={}".format(
+            "[UNKNOWN] enabled=1 detector={} tau1={} tau2={} risk(alpha={},alert={},medium={},high={},anom_q05={},anom_q95={})".format(
                 self.unknown_detector_name,
                 self.unknown_tau1,
                 self.unknown_tau2,
+                self.risk_alpha,
+                self.alert_threshold,
+                self.medium_threshold,
+                self.high_threshold,
+                self.anom_q05,
+                self.anom_q95,
             )
         )
+
+    def _normalize_anomaly_score(self, score: float) -> Optional[float]:
+        if not math.isfinite(score):
+            return None
+        if self.anom_q05 is not None and self.anom_q95 is not None:
+            denom = max(float(self.anom_q95) - float(self.anom_q05), 1e-6)
+            value = (float(score) - float(self.anom_q05)) / denom
+            return float(np.clip(value, 0.0, 1.0))
+
+        if self.unknown_tau2 is not None:
+            return float(1.0 if float(score) > float(self.unknown_tau2) else 0.0)
+        return None
+
+    def _assign_alert_level(self, risk_score: float) -> str:
+        if risk_score >= float(self.high_threshold):
+            return "high"
+        if risk_score >= float(self.medium_threshold):
+            return "medium"
+        return "low"
+
+    @staticmethod
+    def _action_recommendation(level: str) -> str:
+        if level == "high":
+            return "block_or_isolate_and_open_P1_incident"
+        if level == "medium":
+            return "rate_limit_or_watchlist_and_open_P2_ticket"
+        return "log_only_and_baseline_monitoring"
 
     def _score_anomaly_batch(self, features, pred):
         if (
@@ -205,12 +294,15 @@ class SinglePipelineRunner:
         if now - self.last_heartbeat < 5.0:
             return
         print(
-            "[HEARTBEAT] packets_total={} parsed={} dropped={} samples_total={} results_total={} trigger(length/timeout/fin)={}/{}/{} active_flows={} batch_buffer={}".format(
+            "[HEARTBEAT] packets_total={} parsed={} dropped={} samples_total={} results_total={} alert(low/medium/high)={}/{}/{} trigger(length/timeout/fin)={}/{}/{} active_flows={} batch_buffer={}".format(
                 self.total_packets,
                 self.total_parsed_packets,
                 self.total_dropped_packets,
                 self.total_samples,
                 self.total_results,
+                self.alert_level_counter["low"],
+                self.alert_level_counter["medium"],
+                self.alert_level_counter["high"],
                 self.samples_by_trigger["length"],
                 self.samples_by_trigger["timeout"],
                 self.samples_by_trigger["fin_rst"],
@@ -252,13 +344,16 @@ class SinglePipelineRunner:
         for i, item in enumerate(self.batch):
             pred_id = int(pred[i].item())
             confidence = float(conf[i].item())
+            anomaly_score = (
+                float(anomaly_scores[i]) if np.isfinite(anomaly_scores[i]) else None
+            )
 
             low_conf = bool(
                 self.unknown_enable and confidence < float(self.unknown_tau1)
             )
             high_anom = bool(
                 self.unknown_enable
-                and self.unknown_tau2 is not None
+                and math.isfinite(self.unknown_tau2)
                 and np.isfinite(anomaly_scores[i])
                 and anomaly_scores[i] > float(self.unknown_tau2)
             )
@@ -275,6 +370,38 @@ class SinglePipelineRunner:
             else:
                 unknown_reason = "known"
 
+            conf_risk = float(np.clip(1.0 - confidence, 0.0, 1.0))
+            anomaly_risk = (
+                self._normalize_anomaly_score(anomaly_score)
+                if anomaly_score is not None
+                else None
+            )
+
+            if self.unknown_enable:
+                if anomaly_risk is None:
+                    risk_score = conf_risk
+                else:
+                    risk_score = float(
+                        self.risk_alpha * conf_risk
+                        + (1.0 - self.risk_alpha) * float(anomaly_risk)
+                    )
+                risk_score = float(np.clip(risk_score, 0.0, 1.0))
+                is_alert = int(risk_score >= float(self.alert_threshold))
+                alert_level = self._assign_alert_level(risk_score)
+                action_recommendation = self._action_recommendation(alert_level)
+            else:
+                risk_score = conf_risk
+                is_alert = 0
+                alert_level = "low"
+                action_recommendation = "unknown_detection_disabled"
+
+            if conf_risk > (anomaly_risk if anomaly_risk is not None else 0.0) + 0.1:
+                decision_reason = "confidence_driven"
+            elif anomaly_risk is not None and anomaly_risk > conf_risk + 0.1:
+                decision_reason = "anomaly_driven"
+            else:
+                decision_reason = "mixed"
+
             record = {
                 "sample_id": item["sample_id"],
                 "flow_key": item["flow_key"],
@@ -286,12 +413,18 @@ class SinglePipelineRunner:
                 "pred": pred_id,
                 "pred_name": self.label_map.get(pred_id, str(pred_id)),
                 "confidence": confidence,
-                "anomaly_score": (
-                    float(anomaly_scores[i]) if np.isfinite(anomaly_scores[i]) else None
-                ),
+                "anomaly_score": anomaly_score,
+                "anomaly_risk": anomaly_risk,
+                "risk_score": risk_score,
+                "is_alert": is_alert,
+                "alert_level": alert_level,
+                "action_recommendation": action_recommendation,
+                "decision_reason": decision_reason,
                 "is_unknown": int(is_unknown),
                 "unknown_reason": unknown_reason,
             }
+            if alert_level in self.alert_level_counter:
+                self.alert_level_counter[alert_level] += 1
 
             writer.writerow(
                 [
@@ -310,6 +443,16 @@ class SinglePipelineRunner:
                         if record["anomaly_score"] is not None
                         else ""
                     ),
+                    (
+                        f"{record['anomaly_risk']:.6f}"
+                        if record["anomaly_risk"] is not None
+                        else ""
+                    ),
+                    f"{record['risk_score']:.6f}",
+                    record["is_alert"],
+                    record["alert_level"],
+                    record["action_recommendation"],
+                    record["decision_reason"],
                     record["is_unknown"],
                     record["unknown_reason"],
                 ]
@@ -386,6 +529,12 @@ class SinglePipelineRunner:
                     "pred_name",
                     "confidence",
                     "anomaly_score",
+                    "anomaly_risk",
+                    "risk_score",
+                    "is_alert",
+                    "alert_level",
+                    "action_recommendation",
+                    "decision_reason",
                     "is_unknown",
                     "unknown_reason",
                 ]
@@ -423,12 +572,15 @@ class SinglePipelineRunner:
             self._flush_batch(writer, f_jsonl)
 
         print(
-            "[DONE] packets={} parsed={} dropped={} samples={} results={} trigger(length/timeout/fin)={}/{}/{} output_csv={}".format(
+            "[DONE] packets={} parsed={} dropped={} samples={} results={} alert(low/medium/high)={}/{}/{} trigger(length/timeout/fin)={}/{}/{} output_csv={}".format(
                 self.total_packets,
                 self.total_parsed_packets,
                 self.total_dropped_packets,
                 self.total_samples,
                 self.total_results,
+                self.alert_level_counter["low"],
+                self.alert_level_counter["medium"],
+                self.alert_level_counter["high"],
                 self.samples_by_trigger["length"],
                 self.samples_by_trigger["timeout"],
                 self.samples_by_trigger["fin_rst"],
@@ -466,6 +618,12 @@ class SinglePipelineRunner:
                     "pred_name",
                     "confidence",
                     "anomaly_score",
+                    "anomaly_risk",
+                    "risk_score",
+                    "is_alert",
+                    "alert_level",
+                    "action_recommendation",
+                    "decision_reason",
                     "is_unknown",
                     "unknown_reason",
                 ]
@@ -513,12 +671,15 @@ class SinglePipelineRunner:
                 self._flush_batch(writer, f_jsonl)
 
         print(
-            "[DONE-LIVE] packets={} parsed={} dropped={} samples={} results={} trigger(length/timeout/fin)={}/{}/{} output_csv={}".format(
+            "[DONE-LIVE] packets={} parsed={} dropped={} samples={} results={} alert(low/medium/high)={}/{}/{} trigger(length/timeout/fin)={}/{}/{} output_csv={}".format(
                 self.total_packets,
                 self.total_parsed_packets,
                 self.total_dropped_packets,
                 self.total_samples,
                 self.total_results,
+                self.alert_level_counter["low"],
+                self.alert_level_counter["medium"],
+                self.alert_level_counter["high"],
                 self.samples_by_trigger["length"],
                 self.samples_by_trigger["timeout"],
                 self.samples_by_trigger["fin_rst"],
@@ -540,6 +701,10 @@ def run_single_pipeline(
     unknown_detector_path: Optional[str] = None,
     unknown_threshold_conf: Optional[float] = None,
     unknown_threshold_anom: Optional[float] = None,
+    risk_alpha: Optional[float] = None,
+    alert_threshold: Optional[float] = None,
+    medium_threshold: Optional[float] = None,
+    high_threshold: Optional[float] = None,
 ):
     output_csv = os.path.join(output_dir, "realtime_predictions.csv")
     output_jsonl = os.path.join(output_dir, "realtime_predictions.jsonl")
@@ -555,6 +720,10 @@ def run_single_pipeline(
         unknown_detector_path=unknown_detector_path,
         unknown_threshold_conf=unknown_threshold_conf,
         unknown_threshold_anom=unknown_threshold_anom,
+        risk_alpha=risk_alpha,
+        alert_threshold=alert_threshold,
+        medium_threshold=medium_threshold,
+        high_threshold=high_threshold,
     )
 
     if mode == "pcap":
