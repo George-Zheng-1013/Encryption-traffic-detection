@@ -32,27 +32,27 @@ st.markdown(
     @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800&family=Noto+Sans+SC:wght@400;500;700&display=swap');
 
     :root {
-        --bg-0: #060913;
-        --bg-1: #0b1224;
-        --panel: #0f1b34;
-        --panel-2: #14274b;
-        --line: rgba(61, 118, 255, 0.38);
-        --text-main: #eaf1ff;
-        --text-sub: #97abd8;
-        --cyan: #00f0ff;
+        --bg-0: #f3f8ff;
+        --bg-1: #eaf3ff;
+        --panel: #ffffff;
+        --panel-2: #f5f9ff;
+        --line: rgba(43, 123, 255, 0.28);
+        --text-main: #102544;
+        --text-sub: #486786;
+        --cyan: #00a6c7;
         --blue: #2b7bff;
-        --rose: #ff4f7b;
-        --amber: #ffb74d;
-        --mint: #26f2b8;
+        --rose: #e25578;
+        --amber: #d08a1a;
+        --mint: #11ad82;
     }
 
     .stApp {
         color: var(--text-main);
         background:
-            radial-gradient(circle at 16% 12%, rgba(0, 240, 255, 0.16), transparent 32%),
-            radial-gradient(circle at 84% 14%, rgba(43, 123, 255, 0.22), transparent 30%),
-            radial-gradient(circle at 54% 90%, rgba(255, 79, 123, 0.14), transparent 34%),
-            linear-gradient(145deg, var(--bg-0), #05070f 45%, var(--bg-1) 100%);
+            radial-gradient(circle at 16% 12%, rgba(0, 200, 255, 0.10), transparent 34%),
+            radial-gradient(circle at 84% 14%, rgba(43, 123, 255, 0.14), transparent 34%),
+            radial-gradient(circle at 54% 90%, rgba(226, 85, 120, 0.10), transparent 36%),
+            linear-gradient(145deg, var(--bg-0), #eef5ff 45%, var(--bg-1) 100%);
         font-family: 'Noto Sans SC', sans-serif;
     }
 
@@ -66,37 +66,38 @@ st.markdown(
     }
 
     .block-container {
-        padding-top: 1.1rem;
-        padding-bottom: 1.2rem;
+        padding-top: 1.35rem;
+        padding-bottom: 1.6rem;
+        max-width: 96%;
     }
 
     [data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #0a1122, #090f1d);
+        background: linear-gradient(180deg, #f9fbff, #edf4ff);
         border-right: 1px solid var(--line);
     }
 
     .hero {
-        padding: 1rem 1.2rem;
-        border: 1px solid rgba(0, 240, 255, 0.28);
-        border-radius: 16px;
-        background: linear-gradient(135deg, rgba(15, 27, 52, 0.88), rgba(9, 19, 41, 0.92));
-        box-shadow: 0 0 0 1px rgba(61, 118, 255, 0.12), 0 0 28px rgba(0, 240, 255, 0.12);
-        margin-bottom: 0.9rem;
+        padding: 1.25rem 1.5rem;
+        border: 1px solid rgba(43, 123, 255, 0.24);
+        border-radius: 18px;
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.97), rgba(241, 248, 255, 0.95));
+        box-shadow: 0 10px 28px rgba(43, 123, 255, 0.12);
+        margin-bottom: 1rem;
     }
 
     .hero-title {
         font-family: 'Orbitron', 'Noto Sans SC', sans-serif;
-        font-size: 1.95rem;
+        font-size: 2.35rem;
         font-weight: 800;
         letter-spacing: 0.8px;
-        color: #f4f8ff;
+        color: #0f2a4d;
         margin: 0;
     }
 
     .hero-sub {
         margin-top: 0.35rem;
         color: var(--text-sub);
-        font-size: 0.98rem;
+        font-size: 1.12rem;
     }
 
     .badge-row {
@@ -108,50 +109,54 @@ st.markdown(
 
     .badge {
         display: inline-block;
-        border: 1px solid rgba(0, 240, 255, 0.36);
+        border: 1px solid rgba(43, 123, 255, 0.32);
         border-radius: 999px;
-        padding: 0.15rem 0.65rem;
-        font-size: 0.75rem;
-        color: #ccfaff;
-        background: rgba(0, 240, 255, 0.08);
+        padding: 0.2rem 0.75rem;
+        font-size: 0.84rem;
+        color: #22548e;
+        background: rgba(43, 123, 255, 0.10);
     }
 
     [data-testid="stMetric"] {
-        background: linear-gradient(155deg, rgba(20, 39, 75, 0.9), rgba(15, 28, 52, 0.92));
+        background: linear-gradient(155deg, rgba(255, 255, 255, 0.96), rgba(242, 248, 255, 0.96));
         border: 1px solid var(--line);
-        border-radius: 14px;
-        padding: 0.75rem;
-        box-shadow: 0 0 20px rgba(31, 120, 255, 0.12);
+        border-radius: 16px;
+        padding: 1rem;
+        box-shadow: 0 10px 24px rgba(39, 96, 187, 0.10);
     }
 
     [data-testid="stMetricLabel"] {
         color: var(--text-sub);
         font-weight: 600;
+        font-size: 1rem;
     }
 
     [data-testid="stMetricValue"] {
-        color: #f0f6ff;
+        color: #12335d;
         font-family: 'Orbitron', 'Noto Sans SC', sans-serif;
+        font-size: 2.05rem;
     }
 
     .section-title {
-        font-size: 1.02rem;
+        font-size: 1.5rem;
         font-weight: 700;
-        color: #ddedff;
-        margin-bottom: 0.2rem;
+        color: #17365f;
+        margin-bottom: 0.3rem;
     }
 
     .panel-hint {
         color: var(--text-sub);
-        font-size: 0.85rem;
+        font-size: 1rem;
         margin-bottom: 0.35rem;
     }
 
     .model-card {
-        border: 1px solid rgba(43, 123, 255, 0.4);
-        border-radius: 14px;
-        background: linear-gradient(150deg, rgba(13, 24, 45, 0.95), rgba(11, 19, 35, 0.95));
-        padding: 0.9rem 1rem;
+        border: 1px solid rgba(43, 123, 255, 0.28);
+        border-radius: 16px;
+        background: linear-gradient(150deg, rgba(255, 255, 255, 0.98), rgba(241, 248, 255, 0.95));
+        padding: 1.1rem 1.2rem;
+        color: #203b5b;
+        font-size: 1.02rem;
     }
     </style>
     """,
@@ -402,13 +407,15 @@ if page == "实时监控大屏":
         )
         fig_line.update_layout(
             title="过去 24 小时流量态势",
-            template="plotly_dark",
+            template="plotly_white",
             paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(10, 18, 36, 0.82)",
+            plot_bgcolor="rgba(255, 255, 255, 0.95)",
             xaxis_title="时间",
             yaxis_title="数量",
-            xaxis=dict(gridcolor="rgba(255,255,255,0.08)"),
-            yaxis=dict(gridcolor="rgba(255,255,255,0.08)"),
+            font=dict(size=15, color="#183b68"),
+            title_font=dict(size=24, color="#17365f"),
+            xaxis=dict(gridcolor="rgba(25,60,104,0.12)", tickfont=dict(size=13)),
+            yaxis=dict(gridcolor="rgba(25,60,104,0.12)", tickfont=dict(size=13)),
             margin=dict(l=20, r=20, t=58, b=20),
             legend=dict(orientation="h", y=1.08, x=0),
         )
@@ -429,10 +436,12 @@ if page == "实时监控大屏":
                 color_continuous_scale=["#1B355D", "#2B7BFF", "#00F0FF"],
             )
             fig_bar.update_layout(
-                template="plotly_dark",
+                template="plotly_white",
                 paper_bgcolor="rgba(0,0,0,0)",
-                plot_bgcolor="rgba(10, 18, 36, 0.82)",
+                plot_bgcolor="rgba(255, 255, 255, 0.95)",
                 coloraxis_showscale=False,
+                font=dict(size=14, color="#183b68"),
+                title_font=dict(size=22, color="#17365f"),
                 margin=dict(l=10, r=10, t=56, b=20),
                 xaxis_title="告警次数",
                 yaxis_title="",
@@ -465,9 +474,11 @@ if page == "实时监控大屏":
                 },
             )
             fig_donut.update_layout(
-                template="plotly_dark",
+                template="plotly_white",
                 paper_bgcolor="rgba(0,0,0,0)",
-                plot_bgcolor="rgba(10, 18, 36, 0.82)",
+                plot_bgcolor="rgba(255, 255, 255, 0.95)",
+                font=dict(size=14, color="#183b68"),
+                title_font=dict(size=22, color="#17365f"),
                 margin=dict(l=10, r=10, t=50, b=10),
             )
             st.plotly_chart(fig_donut, width="stretch")
@@ -503,7 +514,7 @@ if page == "实时监控大屏":
                 ],
                 width="stretch",
                 hide_index=True,
-                height=320,
+                height=430,
             )
 
 else:
@@ -564,11 +575,13 @@ else:
             title="模型性能对比（含代价敏感收益）",
             yaxis_title="Score (%)",
             yaxis_range=[60, 100],
-            template="plotly_dark",
+            template="plotly_white",
             paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(10, 18, 36, 0.82)",
-            xaxis=dict(gridcolor="rgba(255,255,255,0.08)"),
-            yaxis=dict(gridcolor="rgba(255,255,255,0.08)"),
+            plot_bgcolor="rgba(255, 255, 255, 0.95)",
+            font=dict(size=15, color="#183b68"),
+            title_font=dict(size=24, color="#17365f"),
+            xaxis=dict(gridcolor="rgba(25,60,104,0.12)", tickfont=dict(size=13)),
+            yaxis=dict(gridcolor="rgba(25,60,104,0.12)", tickfont=dict(size=13)),
             legend=dict(orientation="h", y=1.1, x=0),
             margin=dict(l=20, r=20, t=60, b=20),
         )
@@ -586,22 +599,27 @@ else:
     )
     fig_3d.update_traces(marker=dict(size=4))
     fig_3d.update_layout(
-        template="plotly_dark",
+        template="plotly_white",
         paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(10, 18, 36, 0.82)",
+        plot_bgcolor="rgba(255, 255, 255, 0.95)",
+        font=dict(size=14, color="#183b68"),
+        title_font=dict(size=22, color="#17365f"),
         margin=dict(l=0, r=0, t=52, b=0),
         scene=dict(
             xaxis_title="Feature-1",
             yaxis_title="Feature-2",
             zaxis_title="Feature-3",
             xaxis=dict(
-                backgroundcolor="rgba(0,0,0,0)", gridcolor="rgba(255,255,255,0.08)"
+                backgroundcolor="rgba(255,255,255,0.0)",
+                gridcolor="rgba(25,60,104,0.12)",
             ),
             yaxis=dict(
-                backgroundcolor="rgba(0,0,0,0)", gridcolor="rgba(255,255,255,0.08)"
+                backgroundcolor="rgba(255,255,255,0.0)",
+                gridcolor="rgba(25,60,104,0.12)",
             ),
             zaxis=dict(
-                backgroundcolor="rgba(0,0,0,0)", gridcolor="rgba(255,255,255,0.08)"
+                backgroundcolor="rgba(255,255,255,0.0)",
+                gridcolor="rgba(25,60,104,0.12)",
             ),
         ),
     )
@@ -624,10 +642,12 @@ else:
             color_continuous_scale=["#173564", "#2B7BFF", "#00F0FF"],
         )
         fig_class.update_layout(
-            template="plotly_dark",
+            template="plotly_white",
             paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(10, 18, 36, 0.82)",
+            plot_bgcolor="rgba(255, 255, 255, 0.95)",
             coloraxis_showscale=False,
+            font=dict(size=14, color="#183b68"),
+            title_font=dict(size=22, color="#17365f"),
             margin=dict(l=12, r=12, t=52, b=12),
             xaxis_tickangle=-30,
         )
